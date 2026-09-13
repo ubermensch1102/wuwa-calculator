@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>명조 고정 사이클 총딜 계산기 · Beta 1.0</title>
+<style>
+:root{--bg:#0b0e13;--panel:#141923;--panel2:#1b2230;--line:#2b3547;--ink:#edf2f8;--mut:#9ba9bc;--accent:#75c9ff;--good:#73dc9a;--bad:#ff8e8e;--gold:#e6c36f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans KR',sans-serif}
+.wrap{max-width:1280px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}.title{font-size:24px;font-weight:800}.sub{color:var(--mut);font-size:12px}.badge{padding:5px 9px;border:1px solid var(--line);border-radius:999px;color:var(--gold);white-space:nowrap}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.tab{background:var(--panel);color:var(--mut);border:1px solid var(--line);padding:8px 12px;border-radius:8px;cursor:pointer}.tab.on{color:var(--ink);border-color:var(--accent)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}@media(max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}.top{flex-direction:column}}
+label{display:block;color:var(--mut);font-size:11px;margin-bottom:4px}select,input,textarea,button{font:inherit}select,input,textarea{width:100%;background:#0f141d;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:8px}textarea{min-height:160px;font-family:ui-monospace,Consolas,monospace;font-size:12px}.btn{background:#172638;color:var(--ink);border:1px solid #365673;padding:9px 12px;border-radius:8px;cursor:pointer}.btn:hover{border-color:var(--accent)}.btn.primary{background:#173653;border-color:#447da8}.mut{color:var(--mut)}.small{font-size:12px}.num{font-variant-numeric:tabular-nums;font-family:ui-monospace,Consolas,monospace}.big{font-size:26px;font-weight:800;color:var(--accent)}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:4px 0}.hr{height:1px;background:var(--line);margin:10px 0}.good{color:var(--good)}.bad{color:var(--bad)}table{width:100%;border-collapse:collapse}th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:right}th:first-child,td:first-child{text-align:left}.pill{display:inline-block;padding:2px 7px;border-radius:999px;background:#233044;color:#cbd8e8;font-size:10px}.hidden{display:none!important}.warn{border-left:3px solid var(--gold);padding-left:10px;color:#d6c89c}.ok{border-left:3px solid var(--good);padding-left:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.mono{font-family:ui-monospace,Consolas,monospace}.slothead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.slothead b{font-size:16px}.kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}@media(max-width:700px){.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}.kpi .card{text-align:center}.kpi .card .v{font-weight:800;font-size:18px}.section-title{font-weight:800;margin-bottom:8px}.help{cursor:help;border-bottom:1px dotted var(--mut)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><div><div class="title">명조 고정 사이클 총딜 계산기</div><div class="sub">DPS/시간축 제외 · 개별 캐릭터 + 3인 팀 · 표준/사용자 스탯 · 비교 계산</div></div><div class="badge">Beta 1.0 · 2026-09-13</div></div>
+  <div class="tabs">
+    <button class="tab on" data-tab="single">개별 캐릭터</button>
+    <button class="tab" data-tab="team">팀 비교</button>
+    <button class="tab" data-tab="investment">재화 효율</button>
+    <button class="tab" data-tab="validation">검증</button>
+    <button class="tab" data-tab="data">데이터/고급</button>
+  </div>
+
+  <section id="single" class="tabpage">
+    <div class="panel"><div class="section-title">캐릭터 설정</div><div id="singleSlot"></div></div>
+    <div class="panel"><div class="actions"><button class="btn primary" id="runSingleBtn">총딜 계산</button><button class="btn" id="resetBtn">초기화</button></div></div>
+    <div id="singleResult"></div>
+  </section>
+
+  <section id="team" class="tabpage hidden">
+    <div class="grid g2">
+      <div class="panel"><div class="section-title">기준 세팅 A</div><div id="teamA"></div></div>
+      <div class="panel"><div class="section-title">비교 세팅 B</div><div id="teamB"></div></div>
+    </div>
+    <div class="panel"><div class="actions"><button class="btn primary" id="runTeamBtn">A ↔ B 비교</button><button class="btn" id="copyBtn">A를 B로 복사</button></div></div>
+    <div id="teamResult"></div>
+  </section>
+
+
+  <section id="investment" class="tabpage hidden">
+    <div class="panel">
+      <div class="section-title">재화 투자 효율 순위</div>
+      <div class="small mut">팀 비교의 기준 세팅 A를 현재 보유 상태로 사용합니다. 다음 1단계 돌파/재련만 비교합니다. 기대비용은 캐릭터 82뽑, 무기 55뽑으로 고정합니다.</div>
+      <div class="actions" style="margin-top:10px"><button class="btn primary" id="investmentBtn">현재 팀 A 기준 분석</button></div>
+      <div id="investmentResult" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <section id="validation" class="tabpage hidden">
+    <div class="panel">
+      <div class="section-title">회귀 검증 픽스처</div>
+      <div class="small mut">아래 Phro.Love 값은 계산 입력값이 아니라 결과 검증용 정답표로만 분리 저장합니다.</div>
+      <div id="validationResult" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <section id="data" class="tabpage hidden">
+    <div class="panel">
+      <div class="section-title">엔진 상태</div>
+      <div class="grid g3">
+        <div class="card"><div class="mut small">일반 피해식</div><div class="good">구현</div></div>
+        <div class="card"><div class="mut small">버프/디버프 효과</div><div class="good">구현</div></div>
+        <div class="card"><div class="mut small">공명 체인/무기 재련</div><div class="good">핵심 효과 구현</div></div>
+        <div class="card"><div class="mut small">이상효과 공통 인터페이스</div><div class="good">구현</div></div>
+        <div class="card"><div class="mut small">불꽃</div><div class="good">기초 공식 구현</div></div>
+        <div class="card"><div class="mut small">풍식/전자/서리/광학/암흑</div><div class="warn">구조만 구현 · 계수 검증 필요</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="section-title">개인 보유 로스터 범위</div>
+      <div class="small mut">아래 캐릭터는 미보유로 처리하여 데이터 구축/투자 효율 대상에서 제외합니다.</div>
+      <div id="excludedRoster" class="small" style="margin-top:8px"></div>
+    </div>
+    <div class="panel">
+      <div class="section-title">현재 데이터 JSON</div>
+      <div class="small mut">직접 수정 후 ‘적용’하면 브라우저 메모리에서 즉시 반영됩니다. 잘못된 JSON은 적용되지 않습니다.</div>
+      <textarea id="jsonEditor"></textarea>
+      <div class="actions" style="margin-top:8px"><button class="btn" id="loadJsonBtn">현재값 불러오기</button><button class="btn primary" id="applyJsonBtn">JSON 적용</button><button class="btn" id="downloadJsonBtn">JSON 내보내기</button></div>
+    </div>
+  </section>
+</div>
+<script>
+const SKILL_SCALE=[0,0.503,0.544,0.584,0.644,0.695,0.745,0.816,0.886,0.957,1.0]; // Lv10 대비. 1~9는 현 단계 표준 스케일 근사.
+const DEFAULT_SUB={flatAtk:150,atkPct:0.27,critRate:0.336,critDmg:0.672,er:0.288};
+const MAIN_DPS={flatAtk:350,atkPct:0.36,critRate:0,critDmg:0.44,element:0.60,er:0};
+const SUPPORT_ER={flatAtk:350,atkPct:0,critRate:0,critDmg:0.44,element:0,er:0.64,hpPct:0.36};
+let DB={
+ meta:{version:'1.0',note:'개인용 고정 사이클 총딜 엔진. 검증값은 회귀 테스트 전용이며 계산식에는 사용하지 않음.',investmentCost:{character:82,weapon:55},excludedCharacters:['아우구스타','경연','시그리카','구원','상리요','루크 헤르센','갈브레나','카를로타','루파','브렌트','절지','장리','기염','음림','앙코']},
+ enemy:{level:90,resistance:0.20},
+ anomalies:{
+  fusionBurst:{ko:'불꽃',kind:'burst',base90:3674,baseCoeffAt10:6.9863,overflowPerStack:0.33,max:10,verified:true},
+  glacioChafe:{ko:'서리',kind:'onApply/burst',verified:false},
+  aeroErosion:{ko:'풍식',kind:'dot',verified:false},
+  spectroFrazzle:{ko:'광학',kind:'dot-decay',verified:false},
+  electroFlare:{ko:'전자',kind:'dot-half',verified:false},
+  havocBane:{ko:'암흑',kind:'def-reduction',max:3,defReductionPerStack:0.02,verified:true}
+ },
+ weapons:{
+  everbright:{name:'Everbright Polestar',baseAtk:587,sub:{critRate:0.243},ranks:{1:{allDmg:0.12,libDefIgnore:0.32,fusionResIgnore:0.10},2:{allDmg:0.15,libDefIgnore:0.40,fusionResIgnore:0.115},3:{allDmg:0.18,libDefIgnore:0.48,fusionResIgnore:0.13},4:{allDmg:0.21,libDefIgnore:0.56,fusionResIgnore:0.145},5:{allDmg:0.24,libDefIgnore:0.64,fusionResIgnore:0.16}}},
+  dwarf:{name:'Forged Dwarf Star',baseAtk:500,sub:{critRate:0.36},ranks:{1:{atkPct:0.12,libBonus:0.36,teamAtk:0.24},2:{atkPct:0.15,libBonus:0.45,teamAtk:0.30},3:{atkPct:0.18,libBonus:0.54,teamAtk:0.36},4:{atkPct:0.21,libBonus:0.63,teamAtk:0.42},5:{atkPct:0.24,libBonus:0.72,teamAtk:0.48}}},
+  firstlight:{name:"Firstlight's Herald",baseAtk:413,sub:{er:0.77},ranks:{1:{hpPct:0.12,teamAtk:0.20},2:{hpPct:0.15,teamAtk:0.25},3:{hpPct:0.18,teamAtk:0.30},4:{hpPct:0.21,teamAtk:0.35},5:{hpPct:0.24,teamAtk:0.40}}}
+ },
+ characters:{
+  aemeath:{name:'에이메스',element:'fusion',base:{hp:11025,atk:425,def:1149,critRate:0.05,critDmg:1.50,er:1.0},minor:{atkPct:0.12,critRate:0.08},signature:'everbright',standardMain:'dps',mode:'fusionBurst',
+   actions:{
+    intro:{name:'변주',cat:'intro',mv:1.346},basic3:{name:'평타 A 3단',cat:'basic',mv:0.9315},basic4:{name:'평타 A 4단',cat:'basic',mv:1.3459},overdrive:{name:'해방 · Overdrive',cat:'lib',mv:10.0398},mech2:{name:'메카 평타 2단',cat:'basic',mv:0.9283},mech3:{name:'메카 평타 3단',cat:'basic',mv:1.1653},mech4:{name:'메카 평타 4단',cat:'basic',mv:1.3459},encore:{name:'Seraphic Duet · Encore',cat:'lib',mv:3.5760},a2:{name:'평타 A 2단',cat:'basic',mv:0.6946},overture:{name:'Seraphic Duet · Overture',cat:'lib',mv:3.5761},heavy2:{name:'강공 · Mech II',cat:'lib',mv:2.32},finale:{name:'해방 · Finale',cat:'lib',mv:17.8929}},
+   rotation:['intro','basic3','basic4','overdrive','mech2','mech3','mech4','encore','a2','basic3','basic4','overture','heavy2','finale']},
+  denia:{name:'데니아',element:'fusion',base:{hp:11025,atk:425,def:1149,critRate:0.05,critDmg:1.50,er:1.0},minor:{atkPct:0.12,critDmg:0.16},signature:'dwarf',standardMain:'dps',mode:'fusionBurst',
+   actions:{intro:{name:'변주 · Knock Knock',cat:'intro',mv:1.5522},b1:{name:'Breakdown 평타 1',cat:'lib',mv:0.54765},b2:{name:'Breakdown 평타 2',cat:'lib',mv:1.4079},b3:{name:'Breakdown 평타 3',cat:'lib',mv:0.93585},b4:{name:'Breakdown 평타 4',cat:'lib',mv:1.7770},banish1:{name:'Banish 1',cat:'lib',mv:1.0404},banish2:{name:'Banish 2',cat:'lib',mv:1.1201},ultBreak:{name:'해방 · Breakdown',cat:'lib',mv:7.9524},ultStage:{name:'해방 · Stagecraft',cat:'lib',mv:3.9762},erosion:{name:'Erosion Field 1틱',cat:'lib',mv:1.3633}},
+   rotation:['intro','b1','b2','b3','b4','banish1','banish2','ultBreak','erosion','erosion','erosion','erosion','erosion','erosion','erosion']},
+  suisui:{name:'수수',element:'glacio',base:{hp:16712,atk:287,def:1099,critRate:0.05,critDmg:1.50,er:1.0},minor:{hpPct:0.12},signature:'firstlight',standardMain:'support',mode:'negativeStatusSupport',
+   actions:{intro:{name:'변주 · Tinkling Jade',cat:'intro',mv:0.2863},skill:{name:'Drizzle Skill',cat:'skill',mv:1.431},b1:{name:'Drizzle 평타1',cat:'basic',mv:0.782},b2:{name:'Drizzle 평타2',cat:'basic',mv:1.272},b3:{name:'Drizzle 평타3',cat:'basic',mv:1.102},b4:{name:'Drizzle 평타4',cat:'basic',mv:1.590}},rotationS1:['intro','skill','b1','b2','b3','b4'],rotationS3:['intro','skill','b4']}
+ },
+ validationFixtures:[
+  {name:'데니아 R1 → R5',a:{team:[['aemeath',6,5],['denia',6,1],['suisui',3,1]]},b:{team:[['aemeath',6,5],['denia',6,5],['suisui',3,1]]},expected:{a:10722000,b:11478000,delta:0.0705}},
+  {name:'수수 S3 → S1 (A/D S6R5)',a:{team:[['aemeath',6,5],['denia',6,5],['suisui',3,1]]},b:{team:[['aemeath',6,5],['denia',6,5],['suisui',1,1]]},expected:{a:11478000,b:10448000,delta:-0.0897}}
+ ]
+};
+
+function pct(x){return (x*100).toFixed(2)+'%'};function fmt(n){return Math.round(n).toLocaleString('ko-KR')}
+function defMult(charLv=90,enemyLv=90,ignore=0,reduce=0){const a=800+8*charLv,b=(8*enemyLv+792)*(1-ignore)*(1-reduce);return a/(a+b)}
+function resMult(res=0.2,shred=0){let r=res-shred;return r<0?1-r/2:1-r}
+function critExpected(cr,cd){cr=Math.max(0,Math.min(1,cr));return 1+cr*(cd-1)}
+function mainStats(kind){return deepClone(kind==='support'?SUPPORT_ER:MAIN_DPS)}
+function skillScale(level){return SKILL_SCALE[Math.max(1,Math.min(10,+level||10))]}
+function deepClone(x){return JSON.parse(JSON.stringify(x))}
+
+function buildStats(cfg,teamCtx={}){
+ const c=DB.characters[cfg.char],w=DB.weapons[cfg.weapon||c.signature],wr=w.ranks[cfg.rank]||w.ranks[1];
+ const useCustom=cfg.statMode==='custom';
+ if(useCustom){return {atk:+cfg.atk,critRate:+cfg.cr/100,critDmg:+cfg.cd/100,er:+cfg.er/100,elementBonus:+cfg.elem/100,baseAtk:c.base.atk+w.baseAtk,weapon:w,wr,c}}
+ const m=mainStats(c.standardMain),s=DEFAULT_SUB;
+ const baseAtk=c.base.atk+w.baseAtk;
+ let atkPct=(c.minor.atkPct||0)+(m.atkPct||0)+s.atkPct+(wr.atkPct||0)+(teamCtx.teamAtk||0);
+ let flat=(m.flatAtk||0)+s.flatAtk;
+ let atk=baseAtk*(1+atkPct)+flat;
+ let cr=c.base.critRate+(c.minor.critRate||0)+(m.critRate||0)+s.critRate+(w.sub.critRate||0);
+ let cd=c.base.critDmg+(c.minor.critDmg||0)+(m.critDmg||0)+s.critDmg+(w.sub.critDmg||0);
+ let er=c.base.er+(m.er||0)+s.er+(w.sub.er||0);
+ let elem=(m.element||0)+(wr.allDmg||0)+(teamCtx.elementBonus||0);
+ // sequences
+ if(cfg.seq>=1 && cfg.char==='denia') cd+=0.30;
+ if(cfg.seq>=6 && cfg.char==='denia'){atk+=baseAtk*0.60;elem+=0.60}
+ if(cfg.seq>=3 && cfg.char==='aemeath') cd+=0.60;
+ return {atk,critRate:cr,critDmg:cd,er,elementBonus:elem,baseAtk,weapon:w,wr,c};
+}
+
+function teamContext(team){
+ let teamAtk=0,elementBonusBy={fusion:0,glacio:0,aero:0,electro:0,spectro:0,havoc:0},allDmgBonus=0,critDmg=0,amplify=0,statusStackCapBonus=0;
+ for(const cfg of team){if(!cfg.char)continue;const c=DB.characters[cfg.char],w=DB.weapons[cfg.weapon||c.signature],wr=w.ranks[cfg.rank]||{};
+   if(cfg.char==='aemeath' && cfg.seq>=4) allDmgBonus+=0.20;
+   if(cfg.char==='denia'){teamAtk=Math.max(teamAtk,wr.teamAtk||0); if(cfg.seq>=2)elementBonusBy.fusion+=0.50; elementBonusBy.fusion+=0.30;}
+   if(cfg.char==='suisui'){
+     teamAtk+=wr.teamAtk||0;
+     teamAtk+=0.25; // Song of Feathered Trace, ER>=250% standard setup
+     amplify+=0.25; // Outro
+     allDmgBonus+=0.12; // >=400 Floral Epistle, ER-based cap
+     statusStackCapBonus=Math.max(statusStackCapBonus,3); // Liberation
+     if(cfg.seq>=2)critDmg+=0.50;
+     const st=buildStats({...cfg,statMode:cfg.statMode||'standard'},{teamAtk:0,elementBonus:0});
+     if(st.er>=2.60) teamAtk+=0.50; // Undulating Mist standard max
+   }
+ }
+ return {teamAtk,elementBonusBy,allDmgBonus,critDmg,amplify,statusStackCapBonus};
+}
+
+function damageAction(cfg,actionKey,teamCtx){
+ const c=DB.characters[cfg.char],a=c.actions[actionKey]; if(!a)return 0;
+ const st=buildStats(cfg,{teamAtk:teamCtx.teamAtk,elementBonus:teamCtx.elementBonusBy[c.element]||0});
+ let mv=a.mv*skillScale((cfg.skills&&cfg.skills[a.cat])||10), bonus=st.elementBonus+(teamCtx.allDmgBonus||0), amp=teamCtx.amplify||0, ignore=0,resShred=0,taken=0,cr=st.critRate,cd=st.critDmg+teamCtx.critDmg;
+ if(a.cat==='lib'){bonus+=st.wr.libBonus||0;ignore+=st.wr.libDefIgnore||0;if(st.wr.fusionResIgnore)resShred+=st.wr.fusionResIgnore}
+ if(cfg.char==='aemeath'){
+   if(cfg.seq>=2 && (actionKey==='encore'||actionKey==='overture')) mv*=2;
+   if(cfg.seq>=3){if(actionKey==='finale'){mv*=2;amp+=0.25} if(actionKey==='overdrive')mv*=1.4}
+   if(cfg.seq>=1 && actionKey==='heavy2'){cd+=3.00;amp+=2.00}
+   if(cfg.seq>=6 && a.cat==='lib') taken+=0.40;
+ }
+ if(cfg.char==='denia'){
+   if(cfg.seq>=2 && (actionKey==='banish1'||actionKey==='banish2')) mv*=1.40;
+   if(cfg.seq>=3 && actionKey==='banish2') mv += 1.50*5; // S3: max 5 Dark Cores, standard cycle starts full
+   if(cfg.seq>=3 && actionKey==='ultBreak')mv*=1.8;
+   if(cfg.seq>=5 && actionKey==='ultStage')mv*=2;
+ }
+ return st.atk*mv*(1+bonus)*(1+amp)*critExpected(cr,cd)*defMult(90,DB.enemy.level,ignore,0)*resMult(DB.enemy.resistance,resShred)*(1+taken);
+}
+
+function fusionBurstDamage(cfg,teamCtx,stacks=10,multiplierIncrease=0,amplify=0){
+ const A=DB.anomalies.fusionBurst;
+ const over=Math.max(0,stacks-A.max);
+ const statusFactor=A.baseCoeffAt10*(1+multiplierIncrease+A.overflowPerStack*over);
+ let crit=1;
+ // Aemeath S6 makes nearby team-triggered Fusion Burst crit at fixed CR/CD.
+ const aemeathS6=(teamCtx.team||[]).some(x=>x.char==='aemeath'&&x.seq>=6);
+ if(aemeathS6)crit=critExpected(0.80,2.75);
+ return A.base90*statusFactor*(1+amplify)*crit*defMult(90,DB.enemy.level,0,0)*resMult(DB.enemy.resistance,0);
+}
+
+function calcCharacter(cfg,team){
+ const c=DB.characters[cfg.char],ctx=teamContext(team||[cfg]); ctx.team=(team||[cfg]); let rot=cfg.char==='suisui'?(cfg.seq>=3?c.rotationS3:c.rotationS1):c.rotation;
+ let parts=[]; for(const k of rot){const d=damageAction(cfg,k,ctx);parts.push({name:c.actions[k].name,damage:d,type:c.actions[k].cat})}
+ // Lightweight anomaly/events layer for seeded Fusion Burst team. Event counts are rule-derived defaults and user-editable later via JSON.
+ const maxStatusStacks=10+(ctx.statusStackCapBonus||0);
+ if(cfg.char==='aemeath'&&c.mode==='fusionBurst'){
+   // Two Seraphic Duet casts are explicit in the fixed rotation. S2 Stardust raises main-target multiplier increase to 400%.
+   // S6 grants 10 Fusion Trail on each cast; the consuming cast is represented with +150% (10 x 15%).
+   const seraphicAlpha=cfg.seq>=2?[4.0,5.5]:[2.0,3.0];
+   for(const alpha of seraphicAlpha) parts.push({name:'불꽃 · Seraphic Duet',type:'negative',damage:fusionBurstDamage(cfg,ctx,maxStatusStacks,alpha,0.60)});
+   // Fixed simple rotation applies enough Burst stacks for two automatic full-limit detonations through Aemeath's Forte.
+   const natural=cfg.seq>=6?2:1;
+   for(let i=0;i<natural;i++) parts.push({name:'불꽃 · 자동 폭발',type:'negative',damage:fusionBurstDamage(cfg,ctx,maxStatusStacks,0,0.60)});
+ }
+ if(cfg.char==='denia'&&c.mode==='fusionBurst'){
+   // S6: Erosion Field can trigger one max-limit Burst; Breakdown Liberation resets that charge once in this fixed cycle.
+   const special=cfg.seq>=6?1:0;
+   for(let i=0;i<special;i++) parts.push({name:'불꽃 · Erosion S6',type:'negative',damage:fusionBurstDamage(cfg,ctx,maxStatusStacks,2.0,0.60)});
+ }
+ const total=parts.reduce((s,x)=>s+x.damage,0); return {total,parts,stats:buildStats(cfg,{teamAtk:ctx.teamAtk,elementBonus:ctx.elementBonusBy[c.element]||0})};
+}
+function calcTeam(team){let members=team.filter(x=>x.char).map(cfg=>({cfg,res:calcCharacter(cfg,team)}));return {total:members.reduce((s,x)=>s+x.res.total,0),members}}
+
+function slotHtml(id,preset={}){return `<div class="card" id="${id}"><div class="slothead"><b>캐릭터</b><span class="pill">고정 사이클</span></div><div class="grid g3">
+<div><label>캐릭터</label><select data-k="char" >${Object.entries(DB.characters).map(([k,v])=>`<option value="${k}" ${preset.char===k?'selected':''}>${v.name}</option>`).join('')}</select></div>
+<div><label>공명 체인</label><select data-k="seq">${[0,1,2,3,4,5,6].map(n=>`<option value="${n}" ${(preset.seq??6)==n?'selected':''}>S${n}</option>`).join('')}</select></div>
+<div><label>무기 재련</label><select data-k="rank">${[1,2,3,4,5].map(n=>`<option value="${n}" ${(preset.rank??1)==n?'selected':''}>R${n}</option>`).join('')}</select></div>
+</div><div class="grid g3" style="margin-top:8px"><div><label>세팅 입력</label><select data-k="statMode" ><option value="standard">표준(Phro식 부옵)</option><option value="custom">최종 스탯 직접 입력</option></select></div><div><label>무기</label><select data-k="weapon"></select></div><div><label>공명 모드</label><input data-k="mode" disabled></div></div>
+<div class="customStats hidden" style="margin-top:8px"><div class="grid g4"><div><label>ATK</label><input data-k="atk" type="number" value="2300"></div><div><label>치확 %</label><input data-k="cr" type="number" value="75"></div><div><label>치피 %</label><input data-k="cd" type="number" value="280"></div><div><label>공효 %</label><input data-k="er" type="number" value="125"></div><div><label>속성 피해 %</label><input data-k="elem" type="number" value="60"></div></div></div>
+<div class="hr"></div><div class="small mut">스킬 레벨</div><div class="grid g4"><div><label>평타</label><input data-k="skill_basic" type="number" min="1" max="10" value="10"></div><div><label>공명 스킬</label><input data-k="skill_skill" type="number" min="1" max="10" value="10"></div><div><label>공명 해방/회로</label><input data-k="skill_lib" type="number" min="1" max="10" value="10"></div><div><label>변주</label><input data-k="skill_intro" type="number" min="1" max="10" value="10"></div></div>
+<div class="small mut" style="margin-top:8px">Lv10 계수는 탑재 데이터 그대로 사용합니다. Lv1–9는 현재 공통 스케일 근사이며 추후 레벨별 원표로 교체할 수 있습니다.</div></div>`}
+function readSlot(id){let e=document.getElementById(id),get=k=>e.querySelector(`[data-k="${k}"]`);let cfg={char:get('char').value,seq:+get('seq').value,rank:+get('rank').value,weapon:get('weapon').value,statMode:get('statMode').value,mode:get('mode').value,skills:{basic:+get('skill_basic').value,skill:+get('skill_skill').value,lib:+get('skill_lib').value,intro:+get('skill_intro').value}};if(cfg.statMode==='custom'){['atk','cr','cd','er','elem'].forEach(k=>cfg[k]=+get(k).value)}return cfg}
+function slotChanged(id){let e=document.getElementById(id),char=e.querySelector('[data-k="char"]').value,c=DB.characters[char],w=e.querySelector('[data-k="weapon"]');w.innerHTML=Object.entries(DB.weapons).map(([k,v])=>`<option value="${k}" ${k===c.signature?'selected':''}>${v.name}</option>`).join('');e.querySelector('[data-k="mode"]').value=c.mode;e.querySelector('.customStats').classList.toggle('hidden',e.querySelector('[data-k="statMode"]').value!=='custom')}
+function renderSlots(){document.getElementById('singleSlot').innerHTML=slotHtml('single_1',{char:'aemeath',seq:6,rank:5});slotChanged('single_1');let a='',b='';[['aemeath',6,5],['denia',6,1],['suisui',3,1]].forEach((x,i)=>a+=slotHtml(`A_${i}`,{char:x[0],seq:x[1],rank:x[2]}));[['aemeath',6,5],['denia',6,5],['suisui',3,1]].forEach((x,i)=>b+=slotHtml(`B_${i}`,{char:x[0],seq:x[1],rank:x[2]}));document.getElementById('teamA').innerHTML=a;document.getElementById('teamB').innerHTML=b;for(let i=0;i<3;i++){slotChanged(`A_${i}`);slotChanged(`B_${i}`)}}
+function resultTable(r){return `<div class="panel"><div class="kpi"><div class="card"><div class="mut small">총피해</div><div class="v num">${fmt(r.total)}</div></div><div class="card"><div class="mut small">ATK</div><div class="v num">${fmt(r.stats.atk)}</div></div><div class="card"><div class="mut small">치확/치피</div><div class="v num">${pct(r.stats.critRate)} / ${pct(r.stats.critDmg)}</div></div><div class="card"><div class="mut small">공효</div><div class="v num">${pct(r.stats.er)}</div></div></div><table style="margin-top:10px"><thead><tr><th>공격</th><th>종류</th><th>피해</th><th>비중</th></tr></thead><tbody>${r.parts.map(x=>`<tr><td>${x.name}</td><td>${x.type}</td><td class="num">${fmt(x.damage)}</td><td class="num">${pct(x.damage/r.total)}</td></tr>`).join('')}</tbody></table></div>`}
+function runSingle(){let cfg=readSlot('single_1'),r=calcCharacter(cfg,[cfg]);document.getElementById('singleResult').innerHTML=resultTable(r)}
+function runTeamCompare(){let A=[0,1,2].map(i=>readSlot(`A_${i}`)),B=[0,1,2].map(i=>readSlot(`B_${i}`)),ra=calcTeam(A),rb=calcTeam(B),d=rb.total/ra.total-1;document.getElementById('teamResult').innerHTML=`<div class="panel"><div class="kpi"><div class="card"><div class="mut small">A 총딜</div><div class="v num">${fmt(ra.total)}</div></div><div class="card"><div class="mut small">B 총딜</div><div class="v num">${fmt(rb.total)}</div></div><div class="card"><div class="mut small">변화율</div><div class="v num ${d>=0?'good':'bad'}">${d>=0?'+':''}${pct(d)}</div></div><div class="card"><div class="mut small">차이</div><div class="v num">${fmt(rb.total-ra.total)}</div></div></div><table style="margin-top:10px"><thead><tr><th>캐릭터</th><th>A</th><th>B</th><th>변화</th></tr></thead><tbody>${ra.members.map((x,i)=>{let y=rb.members[i],dd=y.res.total/x.res.total-1;return `<tr><td>${x.res.stats.c.name}</td><td class="num">${fmt(x.res.total)}</td><td class="num">${fmt(y.res.total)}</td><td class="num ${dd>=0?'good':'bad'}">${dd>=0?'+':''}${pct(dd)}</td></tr>`}).join('')}</tbody></table><div class="warn small" style="margin-top:10px">Beta 1.0은 공통 피해식/주요 S·R 효과/불꽃 구조와 재화 효율 순위를 구현했습니다. 정확한 Phro 수준의 절대딜은 이상효과 이벤트 수와 에코·상태 적용 순서 보강 후 맞춥니다. 상대 비교가 우선 목표입니다.</div></div>`}
+function copyAtoB(){for(let i=0;i<3;i++){let a=readSlot(`A_${i}`),b=document.getElementById(`B_${i}`);for(const [k,v] of Object.entries(a)){if(k==='skills')continue;let el=b.querySelector(`[data-k="${k}"]`);if(el)el.value=v}for(const [k,v] of Object.entries(a.skills)){let el=b.querySelector(`[data-k="skill_${k}"]`);if(el)el.value=v}slotChanged(`B_${i}`)}}
+function cloneCfg(x){return JSON.parse(JSON.stringify(x))}
+function runInvestmentRanking(){
+ const base=[0,1,2].map(i=>readSlot(`A_${i}`));
+ const baseRes=calcTeam(base);
+ const costs=(DB.meta&&DB.meta.investmentCost)||{character:82,weapon:55};
+ let rows=[];
+ base.forEach((cfg,i)=>{
+   const name=DB.characters[cfg.char].name;
+   if(cfg.seq<6){
+     const t=base.map(cloneCfg); t[i].seq++;
+     const r=calcTeam(t), gain=r.total/baseRes.total-1, cost=costs.character;
+     rows.push({name:`${name} S${cfg.seq} → S${cfg.seq+1}`,type:'캐릭터 돌파',gain,cost,eff:gain/cost,total:r.total});
+   }
+   if(cfg.rank<5){
+     const t=base.map(cloneCfg); t[i].rank++;
+     const r=calcTeam(t), gain=r.total/baseRes.total-1, cost=costs.weapon;
+     rows.push({name:`${name} R${cfg.rank} → R${cfg.rank+1}`,type:'무기 재련',gain,cost,eff:gain/cost,total:r.total});
+   }
+ });
+ rows.sort((a,b)=>b.eff-a.eff);
+ const el=document.getElementById('investmentResult');
+ if(!rows.length){el.innerHTML='<div class="ok small">현재 등록된 팀은 모두 S6/R5라 다음 단계 투자가 없습니다.</div>';return}
+ el.innerHTML=`<div class="kpi"><div class="card"><div class="mut small">현재 팀 총딜</div><div class="v num">${fmt(baseRes.total)}</div></div><div class="card"><div class="mut small">캐릭터 1돌 비용</div><div class="v num">${costs.character}뽑</div></div><div class="card"><div class="mut small">무기 1재련 비용</div><div class="v num">${costs.weapon}뽑</div></div><div class="card"><div class="mut small">비교 방식</div><div class="v">다음 1단계</div></div></div><table style="margin-top:10px"><thead><tr><th>순위</th><th>투자</th><th>종류</th><th>팀딜 증가</th><th>비용</th><th>1뽑당 증가</th></tr></thead><tbody>${rows.map((x,i)=>`<tr><td>${i+1}</td><td>${x.name}</td><td>${x.type}</td><td class="num ${x.gain>=0?'good':'bad'}">${x.gain>=0?'+':''}${pct(x.gain)}</td><td class="num">${x.cost}</td><td class="num">${(x.eff*100).toFixed(4)}%p</td></tr>`).join('')}</tbody></table><div class="small mut" style="margin-top:8px">효율 = 팀 총딜 증가율 ÷ 고정 기대뽑 수. 천장 스택·확정 여부는 고려하지 않습니다.</div>`;
+}
+function renderExcludedRoster(){const e=document.getElementById('excludedRoster');if(e)e.textContent=(DB.meta.excludedCharacters||[]).join(' · ')}
+function fixtureTeam(arr){return arr.map(x=>({char:x[0],seq:x[1],rank:x[2],weapon:DB.characters[x[0]].signature,statMode:'standard',skills:{basic:10,skill:10,lib:10,intro:10}}))}
+function runValidation(){let rows=DB.validationFixtures.map(f=>{let a=calcTeam(fixtureTeam(f.a.team)),b=calcTeam(fixtureTeam(f.b.team)),d=b.total/a.total-1,err=(d-f.expected.delta)*100;return `<tr><td>${f.name}</td><td class="num">${pct(d)}</td><td class="num">${pct(f.expected.delta)}</td><td class="num ${Math.abs(err)<=1?'good':'bad'}">${err>=0?'+':''}${err.toFixed(2)}%p</td></tr>`}).join('');document.getElementById('validationResult').innerHTML=`<table><thead><tr><th>검증 항목</th><th>현재 엔진</th><th>Phro 정답표</th><th>오차</th></tr></thead><tbody>${rows}</tbody></table><div class="small mut" style="margin-top:8px">정답표는 엔진 계산에 사용되지 않습니다. 회귀 테스트에서만 비교합니다.</div>`}
+function loadJsonEditor(){document.getElementById('jsonEditor').value=JSON.stringify(DB,null,2);renderExcludedRoster()}function applyJsonEditor(){try{DB=JSON.parse(document.getElementById('jsonEditor').value);
+document.addEventListener('change',e=>{const slot=e.target.closest('.card[id]');if(slot && (e.target.dataset.k==='char'||e.target.dataset.k==='statMode')) slotChanged(slot.id)});
+document.getElementById('runSingleBtn').addEventListener('click',runSingle);
+document.getElementById('resetBtn').addEventListener('click',resetAll);
+document.getElementById('runTeamBtn').addEventListener('click',runTeamCompare);
+document.getElementById('copyBtn').addEventListener('click',copyAtoB);
+document.getElementById('investmentBtn').addEventListener('click',runInvestmentRanking);
+document.getElementById('loadJsonBtn').addEventListener('click',loadJsonEditor);
+document.getElementById('applyJsonBtn').addEventListener('click',applyJsonEditor);
+document.getElementById('downloadJsonBtn').addEventListener('click',downloadJson);
+renderSlots();renderExcludedRoster();runValidation();runSingle();
+alert('적용했습니다.')}catch(e){alert('JSON 오류: '+e.message)}}function downloadJson(){let blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wuwa_calc_data.json';a.click();URL.revokeObjectURL(a.href)}function resetAll(){renderSlots();document.getElementById('singleResult').innerHTML=''}
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.tabpage').forEach(x=>x.classList.add('hidden'));b.classList.add('on');document.getElementById(b.dataset.tab).classList.remove('hidden');if(b.dataset.tab==='investment')runInvestmentRanking();if(b.dataset.tab==='validation')runValidation();if(b.dataset.tab==='data')loadJsonEditor()});
+
+document.addEventListener('change',e=>{const slot=e.target.closest('.card[id]');if(slot && (e.target.dataset.k==='char'||e.target.dataset.k==='statMode')) slotChanged(slot.id)});
+document.getElementById('runSingleBtn').addEventListener('click',runSingle);
+document.getElementById('resetBtn').addEventListener('click',resetAll);
+document.getElementById('runTeamBtn').addEventListener('click',runTeamCompare);
+document.getElementById('copyBtn').addEventListener('click',copyAtoB);
+document.getElementById('investmentBtn').addEventListener('click',runInvestmentRanking);
+document.getElementById('loadJsonBtn').addEventListener('click',loadJsonEditor);
+document.getElementById('applyJsonBtn').addEventListener('click',applyJsonEditor);
+document.getElementById('downloadJsonBtn').addEventListener('click',downloadJson);
+renderSlots();renderExcludedRoster();runValidation();runSingle();
+
+</script>
+</body>
+</html>
